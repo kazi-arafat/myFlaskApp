@@ -41,7 +41,8 @@ class RegisterForm(Form):
     username = StringField("Username ",[validators.Length(min=4,max=50)])
     email = StringField("Email",[validators.Length(min=6,max=100)])
     password = PasswordField("Password",[validators.DataRequired(),
-    validators.EqualTo("confirm",message="Password do not match")])
+    validators.EqualTo("confirm",message="Password do not match"),
+    validators.Length(min=6)])
     confirm = PasswordField("Confirm Password")
 
 @app.route("/register", methods=["GET","POST"])
@@ -61,6 +62,38 @@ def Register():
         flash("Registered Successfully",'success')
         return redirect(url_for("Index"))
     return render_template("register.html",form=form)
+
+# User Login
+@app.route("/login",methods=["GET","POST"])
+def User_Login():
+    if (request.method == "POST"):
+        # Get Form Fields
+        username = request.form['username']
+        password_candidate = request.form['password']
+        # create cursor
+        with mysql.connection.cursor() as cur:
+            result = cur.execute("SELECT * FROM user WHERE username = '{0}'".format(username))
+            if (result > 0):
+                # Get Stored Hash
+                queryData = cur.fetchone()
+                password_db = queryData['password']
+                name = queryData['name']
+                # compare password 
+                if (sha256_crypt.verify(password_candidate,password_db)):
+                    session['logged_in'] = True
+                    session['username'] = username
+                    session['name'] = name
+                    flash("You are now logged in",'success')
+                    return redirect(url_for("Index",name=name))
+                else:
+                    error = "Invalid Login"
+                    return render_template("login.html",error=error)
+            else:
+                error = "User not found"
+                return render_template("login.html",error=error)
+    return render_template("login.html")
+        # get user by username
+
 
 if (__name__ == '__main__'):
     app.secret_key = 'secret123'

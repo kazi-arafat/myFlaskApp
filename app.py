@@ -4,6 +4,7 @@ from data import GetArticles
 from flask_mysqldb import MySQL
 from wtforms import StringField,TextAreaField,PasswordField,validators,Form
 from passlib.hash import sha256_crypt
+from functools import wraps
 
 
 app = Flask(__name__)
@@ -84,7 +85,7 @@ def User_Login():
                     session['username'] = username
                     session['name'] = name
                     flash("You are now logged in",'success')
-                    return redirect(url_for("Index",name=name))
+                    return redirect(url_for("Dashboard"))
                 else:
                     error = "Invalid Login"
                     return render_template("login.html",error=error)
@@ -93,6 +94,28 @@ def User_Login():
                 return render_template("login.html",error=error)
     return render_template("login.html")
         # get user by username
+
+# Check user logged in
+def login_required(f):
+    @wraps(f)
+    def wrap(*args, **kwargs):
+        if ('logged_in' in session):
+            return f(*args, **kwargs) 
+        else:
+            flash("Unauthorized login.",'danger')
+            return redirect(url_for("User_Login"))
+    return wrap
+
+@app.route("/logout")
+def Logout():
+    session.clear()
+    flash("Logged Out Successfully",'success')
+    return redirect(url_for("User_Login"))
+
+@app.route("/dashboard")
+@login_required
+def Dashboard():
+    return render_template("dashboard.html")
 
 
 if (__name__ == '__main__'):

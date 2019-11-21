@@ -3,5 +3,27 @@
 {% block title %}Dashboard - My Flask App{% endblock %}
 
 {% block body %}
-    <h1>Dashboard<small>Welcome {{session.name}}</small></h1>
+    <h1>Dashboard<small> Welcome {{session.name}}</small></h1>
+    <a class="btn btn-primary" href="/add_article">Add Title</a>
+    <hr>
+    <table class="table table-striped">
+        <tr>
+            
+            <th>Title</th>
+            <th>Author</th>
+            <th>Created</th>
+            <th></th>
+            <th></th>
+        </tr>
+        {% for article in articles %}
+        <tr>
+            
+            <th>{{article.title}}</th>
+            <th>{{article.author}}</th>
+            <th>{{article.registerDate}}</th>
+            <th><a href="/edit_article/{{article.id}}" class="btn btn-warning pull-right" id="editarticle">Edit</a></th>
+            <th><a href="#" class="btn btn-danger" id="deletearticle" >Delete</a></th>
+        </tr>
+        {% endfor %}
+    </table>
 {% endblock %}

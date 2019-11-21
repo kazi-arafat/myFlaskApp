@@ -30,12 +30,26 @@ def About():
 
 @app.route("/articles")
 def Articles():
-    return render_template("articles.html",articles = articles)
+    with mysql.connection.cursor() as curr:
+        getAllArticleQry = "SELECT id,title,author,body,registerDate FROM articles"
+        result = curr.execute(getAllArticleQry)
+        if (result > 0):
+            # We have article in table
+            articles = curr.fetchall()
+            # app.logger.info(articles)
+            return render_template("articles.html",articles=articles)
+        else:
+            # No Articles in DB
+            msg = "No article found."
+            return render_template("rticles.html",msg=msg)
 
 @app.route("/article/<string:id>")
 def Article(id):
-    return render_template("article.html",id=id)
-
+    with mysql.connection.cursor() as curr:
+        getSingleArticle = "SELECT id,title,author,body,registerDate FROM articles WHERE id = {0}".format(id)
+        result = curr.execute(getSingleArticle)
+        article = curr.fetchone()
+        return render_template("article.html",article=article)
 
 class RegisterForm(Form):
     name = StringField("Name ",[validators.Length(min=1,max=50)])
@@ -57,7 +71,7 @@ def Register():
 
         # Create Cursor
         with mysql.connection.cursor() as cur:
-            cur.execute("INSERT INTO user(name,email,username,password) VALUES('{0}','{1}','{2}','{3}')".format(name,email,username,password))
+            cur.execute("INSERT INTO user(name,email,username,password) VALUES(\"{0}\",\"{1}\",\"{2}\",\"{3}\")".format(name,email,username,password))
             # commit to db
             mysql.connection.commit()
         flash("Registered Successfully",'success')
@@ -107,6 +121,7 @@ def login_required(f):
     return wrap
 
 @app.route("/logout")
+@login_required
 def Logout():
     session.clear()
     flash("Logged Out Successfully",'success')
@@ -115,7 +130,39 @@ def Logout():
 @app.route("/dashboard")
 @login_required
 def Dashboard():
-    return render_template("dashboard.html")
+    with mysql.connection.cursor() as curr:
+        getAllArticleQry = "SELECT id,title,author,body,registerDate FROM articles"
+        result = curr.execute(getAllArticleQry)
+        if (result > 0):
+            # We have article in table
+            articles = curr.fetchall()
+            # app.logger.info(articles)
+            return render_template("dashboard.html",articles=articles)
+        else:
+            # No Articles in DB
+            msg = "No article found."
+            return render_template("dashboard.html",msg=msg)
+
+class ArticleForm(Form):
+    title = StringField("Title ",[validators.Length(min=1,max=500)])
+    body = TextAreaField("Body ",[validators.Length(min=30)])
+    
+@app.route("/add_article",methods=['GET','POST'])
+@login_required
+def Add_Article():
+    form = ArticleForm(request.form)
+    if (request.method == 'POST' and form.validate()):
+        title = form.title.data
+        body = form.body.data
+        with mysql.connection.cursor() as curr:
+            articleInsertQuery = "INSERT INTO articles (title,author,body) VALUES (\"{0}\",\"{1}\",\"{2}\")".format(title,session['name'],body)
+            app.logger.info(articleInsertQuery)
+            curr.execute(articleInsertQuery)
+            mysql.connection.commit()
+
+        flash("Article created",'success')
+        return redirect(url_for("Dashboard"))
+    return render_template("add_article.html",form=form)
 
 
 if (__name__ == '__main__'):

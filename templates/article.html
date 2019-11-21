@@ -3,6 +3,12 @@
 {% block title %}Home-My Flask App{% endblock %}
 
 {% block body%}
-    <h1>{{id}}</h1>
+    <h1>{{article.title}}</h1>
+    <small>Written by {{article.author}} on {{article.registerDate}}</small>
+    <hr>
+    <div>
+        {{article.body | safe}}
+        <!-- Safe and pipe will remove extra <p> tag from body and displays the text -->
+    </div>
 
 {% endblock %}

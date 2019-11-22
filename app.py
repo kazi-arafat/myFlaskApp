@@ -120,6 +120,7 @@ def login_required(f):
             return redirect(url_for("User_Login"))
     return wrap
 
+# Logout User
 @app.route("/logout")
 @login_required
 def Logout():
@@ -127,6 +128,7 @@ def Logout():
     flash("Logged Out Successfully",'success')
     return redirect(url_for("User_Login"))
 
+# Dashboard
 @app.route("/dashboard")
 @login_required
 def Dashboard():
@@ -146,7 +148,8 @@ def Dashboard():
 class ArticleForm(Form):
     title = StringField("Title ",[validators.Length(min=1,max=500)])
     body = TextAreaField("Body ",[validators.Length(min=30)])
-    
+
+# Add article from dashboard 
 @app.route("/add_article",methods=['GET','POST'])
 @login_required
 def Add_Article():
@@ -156,7 +159,7 @@ def Add_Article():
         body = form.body.data
         with mysql.connection.cursor() as curr:
             articleInsertQuery = "INSERT INTO articles (title,author,body) VALUES (\"{0}\",\"{1}\",\"{2}\")".format(title,session['name'],body)
-            app.logger.info(articleInsertQuery)
+            # app.logger.info(articleInsertQuery)
             curr.execute(articleInsertQuery)
             mysql.connection.commit()
 
@@ -164,6 +167,47 @@ def Add_Article():
         return redirect(url_for("Dashboard"))
     return render_template("add_article.html",form=form)
 
+# Edit Article
+@app.route("/edit_article/<string:id>", methods=['GET','POST'])
+@login_required
+def Edit_Article(id):
+    form = ArticleForm(request.form)
+    with mysql.connection.cursor() as curr:
+        getArticleByIdQry = "SELECT * FROM articles WHERE id = {0}".format(id)
+        curr.execute(getArticleByIdQry)
+        article = curr.fetchone()
+    form.title.data = article['title']
+    form.body.data = article['body']
+    
+    if (request.method == 'POST' and form.validate()):
+        title = request.form['title']
+        body = request.form['body']
+        with mysql.connection.cursor() as curr:
+            updateArticleByIdQry = "UPDATE articles SET title = \"{0}\",body = \"{1}\" WHERE id = {2}".format(title,body,id)
+            app.logger.info(updateArticleByIdQry)
+            result = curr.execute(updateArticleByIdQry)
+            mysql.connection.commit()
+        flash("Article updated Successfully",'success')
+        return redirect(url_for("Dashboard"))
+    return render_template("edit_article.html",form=form)
+
+# Delete Article
+@app.route("/delete_article/<string:id>",methods=['POST'])
+def Delete_Article(id):
+    deleteArticleQuery = "DELETE FROM articles WHERE id = {0}".format(id)
+    getUserFromDBQry = "SELECT author FROM articles WHERE id = {0}".format(id) 
+    current_user = session['name']
+    with mysql.connection.cursor() as curr:
+        result = curr.execute(getUserFromDBQry)
+        article_owner_db = curr.fetchone()
+        if (article_owner_db['author'] == current_user):
+            curr.execute(deleteArticleQuery)
+            mysql.connection.commit()
+            flash("Article Deleted Successfully",'success')
+            return redirect(url_for("Dashboard"))
+        else:
+            flash("You do not have right to delete this article.",'danger')
+            return redirect(url_for("Dashboard"))
 
 if (__name__ == '__main__'):
     app.secret_key = 'secret123'
